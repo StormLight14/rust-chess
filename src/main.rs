@@ -113,7 +113,7 @@ fn main() {
     }
 
 fn print_board(gameboard: &Board) {
-    for i in 0..8 {
+    for i in (0..8).rev() {
         println!("{:?}", gameboard.squares[i]);
     }
 }
