@@ -32,16 +32,27 @@ impl Piece {
         // implementation of can_move method for each type of piece
         let (from_row, from_col) = from;
         let (to_row, to_col) = to;
+
+        let to_square = &gameboard.squares[to_row as usize][to_col as usize];
         
         if to_col <= 7 && to_row <= 7 { // possible col
             match self.piece_type {
                 PieceType::Pawn => {
-                    return (from_col == to_col // pawn is on same column 
-                    && (to_row == from_row + 1 || // AND pawn is moving one square
-                    (from_row == 1 && to_row == 3))) // OR pawn is on starting square, moving 2
-                    ||
-                    (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to dif column AND
-                    (to_row == to_row && &gameboard.squares[to_row as usize][to_col as usize].piece.piece_type != &PieceType::None) // piece one row ahead, and one column to side
+                    if self.color == Color::White {
+                        return (from_col == to_col // pawn is on same column 
+                        && (to_row == from_row + 1 || // AND pawn is moving one square
+                        (from_row == 1 && to_row == 3))) // OR pawn is on starting square, moving 2
+                        ||
+                        (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to dif column AND
+                        (to_row == from_row + 1 && &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color) // enemy piece is takeable
+                    } else {
+                        return (from_col == to_col // pawn is on same column 
+                        && (to_row == from_row + 1 || // AND pawn is moving one square
+                        (from_row == 6 && to_row == 4))) // OR pawn is on starting square, moving 2
+                        ||
+                        (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to dif column AND
+                        (to_row == from_row - 1 && &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color) // piece one row ahead, and one column to side
+                    }
                 },
                 PieceType::Knight => {
                     false
@@ -84,11 +95,12 @@ struct Board {
     squares: Vec<Vec<Square>>,
 }
 
+//MAIN FUNCTION
 fn main() {
     let gameboard = create_board();
 
     print_board(&gameboard);
-    println!("{:?}", gameboard.squares[1][0].piece.can_move((1,0),(2,1),&gameboard));
+    println!("{:?}", gameboard.squares[6][0].piece.can_move((6,0),(5,1),&gameboard));
 
 }
 
