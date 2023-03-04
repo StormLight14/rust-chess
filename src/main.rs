@@ -113,7 +113,42 @@ fn main() {
     }
 
 fn print_board(gameboard: &Board) {
-    for i in (0..8).rev() {
-        println!("{:?}", gameboard.squares[i]);
+    for row in (0..8).rev() {
+        let mut row_str = "".to_string();
+        for col in (0..8).rev() {
+            let square = &gameboard.squares[row][col];
+            let square_str = match square.color {
+                Color::White => {
+                    
+                    match square.piece {
+                        Piece::Pawn => "P ",
+                        Piece::Knight => "N ",
+                        Piece::Bishop => "B ",
+                        Piece::Rook => "R ",
+                        Piece::Queen => "Q ",
+                        Piece::King => "K ",
+                        _ => "# ",
+                    }
+                },
+                Color::Black => {
+                    match square.piece {
+                        Piece::Pawn => "p ",
+                        Piece::Knight => "n ",
+                        Piece::Bishop => "b ",
+                        Piece::Rook => "r ",
+                        Piece::Queen => "q ",
+                        Piece::King => "k ",
+                        _ => "# ",
+                    }
+                }
+            };
+            row_str.push_str(square_str);
+            
+        }
+        println!("{:?}", row_str);
     }
+}
+
+fn print_type_of<T>(_: &T) {
+    println!("{}", std::any::type_name::<T>())
 }
