@@ -60,10 +60,6 @@ impl Piece {
                     // L shape?
                     false
                 },
-                PieceType::Bishop => {
-                    // diagonal
-                    false
-                },
                 PieceType::Rook => match (from_row.cmp(&to_row), from_col.cmp(&to_col)) {
                     (Ordering::Less, Ordering::Equal) => {
                         // check if there are any pieces in the way
@@ -107,9 +103,75 @@ impl Piece {
                     },
                     _ => false,
                 }
+                PieceType::Bishop => {
+                    // diagonal
+                    let (delta_row, delta_col) = (to_row as i8 - from_row as i8, to_col as i8 - from_col as i8);
+                    if delta_row.abs() != delta_col.abs() {
+                        return false;
+                    }
+    
+                    let row_step = delta_row.signum();
+                    let col_step = delta_col.signum();
+    
+                    for i in 1..delta_row.abs() {
+                        let row = (from_row as i8 + i * row_step) as u8;
+                        let col = (from_col as i8 + i * col_step) as u8;
+                        let square = &gameboard.squares[row as usize][col as usize];
+                        if square.piece.piece_type != PieceType::None {
+                            return false;
+                        }
+                    }
+    
+                    true
+                },
                 PieceType::Queen => {
+                    if &to_square.piece.color != &self.color {
                     // straight and diagonal
+                    let (delta_row, delta_col) = (to_row as i8 - from_row as i8, to_col as i8 - from_col as i8);
+                    if delta_row.abs() == delta_col.abs() {
+                        // diagonal
+                        let row_step = delta_row.signum();
+                        let col_step = delta_col.signum();
+    
+                        for i in 1..delta_row.abs() {
+                            let row = (from_row as i8 + i * row_step) as u8;
+                            let col = (from_col as i8 + i * col_step) as u8;
+                            let square = &gameboard.squares[row as usize][col as usize];
+                            if square.piece.piece_type != PieceType::None {
+                                return false;
+                            }
+                        }
+    
+                        true
+                    } else if delta_row == 0 || delta_col == 0 {
+                        // straight
+                        if delta_row == 0 {
+                            let col_step = delta_col.signum();
+    
+                            for col in (from_col as i8 + col_step)..to_col as i8 {
+                                let square = &gameboard.squares[from_row as usize][col as usize];
+                                if square.piece.piece_type != PieceType::None {
+                                    return false;
+                                }
+                            }
+                        } else {
+                            let row_step = delta_row.signum();
+    
+                            for row in (from_row as i8 + row_step)..to_row as i8 {
+                                let square = &gameboard.squares[row as usize][from_col as usize];
+                                if square.piece.piece_type != PieceType::None {
+                                    return false;
+                                }
+                            }
+                        }
+    
+                        true
+                    } else {
+                        false
+                    }
+                } else {
                     false
+                }
                 },
                 PieceType::King => {
                     return 
@@ -147,7 +209,7 @@ fn main() {
     let gameboard = create_board();
 
     print_board(&gameboard);
-    println!("{:?}", gameboard.squares[2][1].piece.can_move((2,1),(5,1),&gameboard));
+    println!("{:?}", gameboard.squares[2][1].piece.can_move((0,3),(0,4),&gameboard));
 
 }
 
