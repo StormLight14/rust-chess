@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 #[derive(Debug, Clone, PartialEq)]
 enum PieceType {
     None,
@@ -55,21 +57,64 @@ impl Piece {
                     }
                 },
                 PieceType::Knight => {
+                    // L shape?
                     false
                 },
                 PieceType::Bishop => {
+                    // diagonal
                     false
                 },
-                PieceType::Rook => {
-                    false
-                },
+                PieceType::Rook => match (from_row.cmp(&to_row), from_col.cmp(&to_col)) {
+                    (Ordering::Less, Ordering::Equal) => {
+                        // check if there are any pieces in the way
+                        for row in from_row + 1..to_row {
+                            let square = &gameboard.squares[row as usize][from_col as usize];
+                            if square.piece.piece_type != PieceType::None {
+                                return false;
+                            }
+                        }
+                        true
+                    },
+                    (Ordering::Equal, Ordering::Less) => {
+                        // check if there are any pieces in the way
+                        for col in from_col + 1..to_col {
+                            let square = &gameboard.squares[from_row as usize][col as usize];
+                            if square.piece.piece_type != PieceType::None {
+                                return false;
+                            }
+                        }
+                        true
+                    },
+                    (Ordering::Equal, Ordering::Greater) => {
+                        // check if there are any pieces in the way
+                        for col in (to_col + 1..from_col).rev() {
+                            let square = &gameboard.squares[from_row as usize][col as usize];
+                            if square.piece.piece_type != PieceType::None {
+                                return false;
+                            }
+                        }
+                        true
+                    },
+                    (Ordering::Greater, Ordering::Equal) => {
+                        // check if there are any pieces in the way
+                        for row in (to_row + 1..from_row).rev() {
+                            let square = &gameboard.squares[row as usize][from_col as usize];
+                            if square.piece.piece_type != PieceType::None {
+                                return false;
+                            }
+                        }
+                        true
+                    },
+                    _ => false,
+                }
                 PieceType::Queen => {
+                    // straight and diagonal
                     false
                 },
                 PieceType::King => {
                     return 
-                    (to_row <= from_row + 1 && to_row >= from_row - 1) && (to_col <= from_col + 1 && to_col >= from_col - 1) && // can only move 1 in any direction
-                    &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color // can only move to a square if it is empty or has enemy piece on it
+                    (to_row <= from_row + 1 && to_row >= from_row - 1) && (to_col <= from_col + 1 && to_col >= from_col - 1) && // can only move 1 square in any direction
+                    &to_square.piece.piece_type == &PieceType::None || &to_square.piece.color != &self.color // can only move to square if it is empty or has enemy piece on it
                 },
                 _ => {
                     false
@@ -102,7 +147,7 @@ fn main() {
     let gameboard = create_board();
 
     print_board(&gameboard);
-    println!("{:?}", gameboard.squares[5][1].piece.can_move((5,1),(6,1),&gameboard));
+    println!("{:?}", gameboard.squares[2][1].piece.can_move((2,1),(5,1),&gameboard));
 
 }
 
@@ -138,8 +183,8 @@ fn create_board() -> Board {
         squares.push(row_squares);
         
     }
-    squares[2][1] = Square{piece: Piece{piece_type: PieceType::King, color: Color::Black}};
-    squares[5][1] = Square{piece: Piece{piece_type: PieceType::King, color: Color::White}};
+    squares[2][1] = Square{piece: Piece{piece_type: PieceType::Rook, color: Color::White}};
+    squares[5][1] = Square{piece: Piece{piece_type: PieceType::Rook, color: Color::Black}};
     
     // return a Board
     Board {
@@ -154,7 +199,6 @@ fn print_board(gameboard: &Board) {
         let mut row_str = "".to_string();
         // iterate through each square in each row, also reversed
         for col in (0..8) {
-            
             let square = &gameboard.squares[row][col];
             // set what the square gets displayed as, depending on color and piece
             let square_str = match square.piece.color {
@@ -187,6 +231,11 @@ fn print_board(gameboard: &Board) {
         }
         println!("{:?}", row_str);
     }
+}
+
+fn square_is_empty(piece: &Piece, row: u8, col: u8, gameboard: &Board) -> bool {
+    let to_square = &gameboard.squares[row as usize][col as usize];
+    &to_square.piece.piece_type == &PieceType::None || &to_square.piece.color != &piece.color
 }
 
 fn print_type_of<T>(_: &T) {
