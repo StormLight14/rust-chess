@@ -52,7 +52,7 @@ impl Piece {
                         && (to_row == from_row + 1 || // AND pawn is moving one square
                         (from_row == 6 && to_row == 4))) // OR pawn is on starting square, moving 2
                         ||
-                        (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to dif column AND
+                        (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to different column AND
                         (to_row == from_row - 1 && &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color) // piece one row ahead, and one column to side
                     }
                 },
@@ -61,9 +61,11 @@ impl Piece {
                     false
                 },
                 PieceType::Rook => match (from_row.cmp(&to_row), from_col.cmp(&to_col)) {
+                    // if to_row < and to_col ==
                     (Ordering::Less, Ordering::Equal) => {
-                        // check if there are any pieces in the way
+                        // iterate through each row between
                         for row in from_row + 1..to_row {
+                            // iterate through each square in between the rook and destination
                             let square = &gameboard.squares[row as usize][from_col as usize];
                             if square.piece.piece_type != PieceType::None {
                                 return false;
@@ -71,9 +73,11 @@ impl Piece {
                         }
                         true
                     },
+                    // if to_row == and to_col <
                     (Ordering::Equal, Ordering::Less) => {
-                        // check if there are any pieces in the way
+                        // iterate through each col between
                         for col in from_col + 1..to_col {
+                            // iterate through each square in between the rook and destination
                             let square = &gameboard.squares[from_row as usize][col as usize];
                             if square.piece.piece_type != PieceType::None {
                                 return false;
@@ -81,9 +85,11 @@ impl Piece {
                         }
                         true
                     },
+                    // if to_row == and to_col >
                     (Ordering::Equal, Ordering::Greater) => {
-                        // check if there are any pieces in the way
+                        // iterate through each col between, but reversed order.
                         for col in (to_col + 1..from_col).rev() {
+                            // iterate through each square in between the rook and destination
                             let square = &gameboard.squares[from_row as usize][col as usize];
                             if square.piece.piece_type != PieceType::None {
                                 return false;
@@ -91,9 +97,11 @@ impl Piece {
                         }
                         true
                     },
+                    // if to_row > and to_col ==
                     (Ordering::Greater, Ordering::Equal) => {
-                        // check if there are any pieces in the way
+                        // iterate through each row between, but reversed order.
                         for row in (to_row + 1..from_row).rev() {
+                            // iterate through each square in between the rook and destination
                             let square = &gameboard.squares[row as usize][from_col as usize];
                             if square.piece.piece_type != PieceType::None {
                                 return false;
@@ -102,76 +110,12 @@ impl Piece {
                         true
                     },
                     _ => false,
-                }
+                }, 
                 PieceType::Bishop => {
-                    // diagonal
-                    let (delta_row, delta_col) = (to_row as i8 - from_row as i8, to_col as i8 - from_col as i8);
-                    if delta_row.abs() != delta_col.abs() {
-                        return false;
-                    }
-    
-                    let row_step = delta_row.signum();
-                    let col_step = delta_col.signum();
-    
-                    for i in 1..delta_row.abs() {
-                        let row = (from_row as i8 + i * row_step) as u8;
-                        let col = (from_col as i8 + i * col_step) as u8;
-                        let square = &gameboard.squares[row as usize][col as usize];
-                        if square.piece.piece_type != PieceType::None {
-                            return false;
-                        }
-                    }
-    
-                    true
+                   false
                 },
                 PieceType::Queen => {
-                    if &to_square.piece.color != &self.color {
-                    // straight and diagonal
-                    let (delta_row, delta_col) = (to_row as i8 - from_row as i8, to_col as i8 - from_col as i8);
-                    if delta_row.abs() == delta_col.abs() {
-                        // diagonal
-                        let row_step = delta_row.signum();
-                        let col_step = delta_col.signum();
-    
-                        for i in 1..delta_row.abs() {
-                            let row = (from_row as i8 + i * row_step) as u8;
-                            let col = (from_col as i8 + i * col_step) as u8;
-                            let square = &gameboard.squares[row as usize][col as usize];
-                            if square.piece.piece_type != PieceType::None {
-                                return false;
-                            }
-                        }
-    
-                        true
-                    } else if delta_row == 0 || delta_col == 0 {
-                        // straight
-                        if delta_row == 0 {
-                            let col_step = delta_col.signum();
-    
-                            for col in (from_col as i8 + col_step)..to_col as i8 {
-                                let square = &gameboard.squares[from_row as usize][col as usize];
-                                if square.piece.piece_type != PieceType::None {
-                                    return false;
-                                }
-                            }
-                        } else {
-                            let row_step = delta_row.signum();
-    
-                            for row in (from_row as i8 + row_step)..to_row as i8 {
-                                let square = &gameboard.squares[row as usize][from_col as usize];
-                                if square.piece.piece_type != PieceType::None {
-                                    return false;
-                                }
-                            }
-                        }
-    
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
+                  false  
                 },
                 PieceType::King => {
                     return 
@@ -204,12 +148,11 @@ struct Board {
     squares: Vec<Vec<Square>>,
 }
 
-//MAIN FUNCTION
 fn main() {
     let gameboard = create_board();
 
     print_board(&gameboard);
-    println!("{:?}", gameboard.squares[2][1].piece.can_move((0,3),(0,4),&gameboard));
+    println!("{:?}", gameboard.squares[2][1].piece.can_move((2,1),(2,2),&gameboard));
 
 }
 
