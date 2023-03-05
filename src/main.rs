@@ -67,7 +67,9 @@ impl Piece {
                     false
                 },
                 PieceType::King => {
-                    false
+                    return 
+                    (to_row <= from_row + 1 && to_row >= from_row - 1) && (to_col <= from_col + 1 && to_col >= from_col - 1) && // can only move 1 in any direction
+                    &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color // can only move to a square if it is empty or has enemy piece on it
                 },
                 _ => {
                     false
@@ -100,7 +102,7 @@ fn main() {
     let gameboard = create_board();
 
     print_board(&gameboard);
-    println!("{:?}", gameboard.squares[6][0].piece.can_move((6,0),(5,1),&gameboard));
+    println!("{:?}", gameboard.squares[5][1].piece.can_move((5,1),(6,1),&gameboard));
 
 }
 
@@ -136,8 +138,8 @@ fn create_board() -> Board {
         squares.push(row_squares);
         
     }
-    squares[2][1] = Square{piece: Piece{piece_type: PieceType::Pawn, color: Color::Black}};
-    squares[5][1] = Square{piece: Piece{piece_type: PieceType::Pawn, color: Color::White}};
+    squares[2][1] = Square{piece: Piece{piece_type: PieceType::King, color: Color::Black}};
+    squares[5][1] = Square{piece: Piece{piece_type: PieceType::King, color: Color::White}};
     
     // return a Board
     Board {
