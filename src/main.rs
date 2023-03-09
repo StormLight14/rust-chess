@@ -30,7 +30,7 @@ impl Piece {
         }
     }
 
-    fn can_move(&self, from: (u8, u8), to: (u8, u8), gameboard: &Board) -> bool {
+    fn can_move(&self, from: (u8, u8), to: (u8, u8), gameboard: &mut Board) -> bool {
         // implementation of can_move method for each type of piece
         let (from_row, from_col) = from;
         let (to_row, to_col) = to;
@@ -57,7 +57,7 @@ impl Piece {
                     }
                 },
                 PieceType::Knight => {
-                    // L shape?
+                    // L shape
                     false
                 },
                 PieceType::Rook => match (from_row.cmp(&to_row), from_col.cmp(&to_col)) {
@@ -112,7 +112,8 @@ impl Piece {
                     _ => false,
                 }, 
                 PieceType::Bishop => {
-                   false
+                // https://doc.rust-lang.org/std/primitive.u8.html#method.abs_diff
+                false
                 },
                 PieceType::Queen => {
                   false  
@@ -130,6 +131,19 @@ impl Piece {
             false
         }
     }
+    fn move_piece(&self, from: (u8, u8), to: (u8, u8), gameboard: &mut Board) -> Board {
+        let (from_row, from_col) = from;
+        let (to_row, to_col) = to;
+
+        if self.can_move(from, to, gameboard) {
+            gameboard.squares[from_row as usize][from_col as usize] = Square {piece: Piece {piece_type: PieceType::None, color: Color::Black}};
+            gameboard.squares[to_row as usize][to_col as usize] = Square {piece: Piece {piece_type: self.piece_type.clone(), color: self.color.clone()}};
+            gameboard.clone()
+        } else {
+            println!("Piece can not move there.");
+            gameboard.clone()
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -143,18 +157,27 @@ struct Square {
     piece: Piece,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Board {
     squares: Vec<Vec<Square>>,
 }
 
 fn main() {
-    let gameboard = create_board();
+    let mut gameboard = create_board();
 
     print_board(&gameboard);
-    println!("{:?}", gameboard.squares[2][1].piece.can_move((2,1),(2,2),&gameboard));
+    let from_row: u8 = 2;
+    let from_col: u8 = 1;
 
+    let piece = &gameboard.squares[from_row as usize][from_col as usize].piece.clone();
+    let new_gameboard = piece.move_piece((from_row,from_col),(5,1),&mut gameboard);
+
+    let updated_gameboard = new_gameboard;
+    gameboard = updated_gameboard;
+    print_board(&gameboard);
 }
+
+
 
 fn create_board() -> Board {
     // created nested Vecs that hold Squares
