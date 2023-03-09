@@ -83,8 +83,11 @@ impl Piece {
                     }
                 },
                 PieceType::Knight => {
-                    // L shape
-                    false
+                    let row_diff = (to_row as i8 - from_row as i8).abs();
+                    let col_diff = (to_col as i8 - from_col as i8).abs();
+
+                    // row change must be 1 and col change 2, or vice versa
+                    (row_diff == 1 && col_diff == 2) || (row_diff == 2 && col_diff == 1)
                 },
                 PieceType::Rook => match (from_row.cmp(&to_row), from_col.cmp(&to_col)) {
                     // if to_row < and to_col ==
@@ -138,11 +141,48 @@ impl Piece {
                     _ => false,
                 }, 
                 PieceType::Bishop => {
-                // https://doc.rust-lang.org/std/primitive.u8.html#method.abs_diff
-                false
+                    if from_row != to_row && from_col != to_col && (from_row as i8 - to_row as i8).abs() == (from_col as i8 - to_col as i8).abs() {
+                        let row_step = (to_row as i8 - from_row as i8).signum(); // +1 for upward diagonal, -1 for downward diagonal
+                        let col_step = (to_col as i8 - from_col as i8).signum(); // +1 for rightward diagonal, -1 for leftward diagonal
+                        
+                        let mut row = from_row as i8 + row_step;
+                        let mut col = from_col as i8 + col_step;
+                        
+                        while row != to_row as i8 && col != to_col as i8 {
+                            let square = &gameboard.squares[row as usize][col as usize];
+                            if square.piece.piece_type != PieceType::None {
+                                return false;
+                            }
+                            row += row_step;
+                            col += col_step;
+                        }
+                        
+                        true
+                    } else {
+                        false
+                    }
                 },
                 PieceType::Queen => {
-                  false  
+                    if from_row == to_row || from_col == to_col || (from_row as i8 - to_row as i8).abs() == (from_col as i8 - to_col as i8).abs() {
+                        let row_step = if from_row == to_row { 0 } else { (to_row as i8 - from_row as i8).signum() }; // +1 for upward diagonal, -1 for downward diagonal
+                        let col_step = if from_col == to_col { 0 } else { (to_col as i8 - from_col as i8).signum() }; // +1 for rightward diagonal, -1 for leftward diagonal
+                        
+                        let mut row = from_row as i8 + row_step;
+                        let mut col = from_col as i8 + col_step;
+                        
+                        while row != to_row as i8 || col != to_col as i8 {
+                            let square = &gameboard.squares[row as usize][col as usize];
+                            if square.piece.piece_type != PieceType::None {
+                                return false;
+                            }
+                            row += row_step;
+                            col += col_step;
+                        }
+                        
+                        true
+                    } else {
+                        false
+                    } 
                 },
                 PieceType::King => {
                     return 
