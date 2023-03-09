@@ -1,4 +1,30 @@
 use std::cmp::Ordering;
+use std::io;
+
+fn main() {
+    let mut gameboard = create_board();
+    let mut playing = true;
+
+    print_board(&gameboard);
+
+    while playing {
+        let positions = get_cli_input();
+        let from_row = positions.0;
+        let from_col = positions.1;
+        let to_row = positions.2;
+        let to_col = positions.3;
+        println!("{:?}", positions);
+
+        let piece = &gameboard.squares[from_row as usize][from_col as usize].piece.clone();
+        let new_gameboard = piece.move_piece((from_row,from_col),(to_row,to_col),&mut gameboard);
+
+        let updated_gameboard = new_gameboard;
+        gameboard = updated_gameboard;
+
+        print_board(&gameboard);
+    }
+}
+
 
 #[derive(Debug, Clone, PartialEq)]
 enum PieceType {
@@ -162,22 +188,6 @@ struct Board {
     squares: Vec<Vec<Square>>,
 }
 
-fn main() {
-    let mut gameboard = create_board();
-
-    print_board(&gameboard);
-    let from_row: u8 = 2;
-    let from_col: u8 = 1;
-
-    let piece = &gameboard.squares[from_row as usize][from_col as usize].piece.clone();
-    let new_gameboard = piece.move_piece((from_row,from_col),(5,1),&mut gameboard);
-
-    let updated_gameboard = new_gameboard;
-    gameboard = updated_gameboard;
-    print_board(&gameboard);
-}
-
-
 
 fn create_board() -> Board {
     // created nested Vecs that hold Squares
@@ -259,6 +269,47 @@ fn print_board(gameboard: &Board) {
         }
         println!("{:?}", row_str);
     }
+    println!("");
+}
+
+fn get_cli_input() -> (u8, u8, u8, u8) {
+    let mut user_input = "".to_string();
+
+    io::stdin()
+        .read_line(&mut user_input)
+        .expect("Could not read line.");
+    let trimmed_input = user_input.trim();
+    
+    let input_square: Vec<&str> = trimmed_input.split(" ").collect();
+    let from_square = input_square[0];
+    let to_square = input_square[1];
+
+    let from_file_n = letter_to_number(&from_square[0..1]);
+    let from_rank = &from_square[1..2].parse::<u8>().unwrap() - 1;
+    
+    let to_file_n = letter_to_number(&to_square[0..1]);
+    let to_rank = &to_square[1..2].parse::<u8>().unwrap() - 1;
+
+    let from_file = match from_file_n {
+        Some(x) => x,
+        None => {
+            panic!("invalid file.");
+        }
+    };
+    let to_file = match to_file_n {
+        Some(x) => x,
+        None => {
+            panic!("invalid file.");
+        }
+    };
+
+    (from_rank, from_file, to_rank, to_file)
+}
+
+fn letter_to_number(letter: &str) -> Option<u8> {
+    let alphabet = "abcdefgh";
+    let index = alphabet.find(letter)?;
+    Some((index) as u8)
 }
 
 fn square_is_empty(piece: &Piece, row: u8, col: u8, gameboard: &Board) -> bool {
