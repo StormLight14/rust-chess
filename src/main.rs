@@ -3,11 +3,12 @@ use std::io;
 
 fn main() {
     let mut gameboard = create_board();
-    let mut playing = true;
+    let playing = true;
 
     print_board(&gameboard);
 
     while playing {
+        gameboard.putting_in_check();
         let positions = get_cli_input();
         let from_row = positions.0;
         let from_col = positions.1;
@@ -59,178 +60,190 @@ impl Piece {
     }
 
     fn can_move(&self, from: (u8, u8), to: (u8, u8), gameboard: &mut Board) -> bool {
-        println!("{:?}", &self.color);
         // implementation of can_move method for each type of piece
         let (from_row, from_col) = from;
         let (to_row, to_col) = to;
 
-        let from_square = &gameboard.squares[from_row as usize][to_col as usize];
+        let from_square = &gameboard.squares[from_row as usize][from_col as usize];
         let to_square = &gameboard.squares[to_row as usize][to_col as usize];
-        
-        if &to_square.piece.color != &self.color || &to_square.piece.piece_type == &PieceType::None { /* isn't taking own piece */
-        if &gameboard.current_turn == &self.color {
-            // is turn
-            if to_col <= 7 && to_row <= 7 {
-                // possible col
-                match self.piece_type {
-                    PieceType::Pawn => {
-                        if self.color == Color::White {
-                            return (from_col == to_col // pawn is on same column 
+
+        /* isn't taking own piece */
+        if &to_square.piece.color != &self.color || &to_square.piece.piece_type == &PieceType::None
+        {
+            if gameboard.in_check != from_square.piece.color {
+                // is turn
+                if &gameboard.current_turn == &self.color {
+                    if to_col <= 7 && to_row <= 7 {
+                        // possible col
+                        match self.piece_type {
+                            PieceType::Pawn => {
+                                if self.color == Color::White {
+                                    return (from_col == to_col // pawn is on same column 
                           && (to_row == from_row + 1 || // AND pawn is moving one square
                           (from_row == 1 && to_row == 3))) // OR pawn is on starting square, moving 2
                           ||
                           (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to dif column AND
                           (to_row == from_row + 1 && &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color);
 
-                        // enemy piece is takeable
-                        } else {
-                            return (from_col == to_col // pawn is on same column 
+                                // enemy piece is takeable
+                                } else {
+                                    return (from_col == to_col // pawn is on same column 
                           && (to_row == from_row - 1 || // AND pawn is moving one square
                           (from_row == 6 && to_row == 4))) // OR pawn is on starting square, moving 2
                           ||
                           (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to different column AND
                           (to_row == from_row - 1 && &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color);
-                            // piece one row ahead, and one column to side
-                        }
-                    }
-                    PieceType::Knight => {
-                        let row_diff = to_row.abs_diff(from_row);
-                        let col_diff = to_col.abs_diff(from_col);
-
-                        // row change must be 1 and col change 2, or vice versa
-                        (row_diff == 1 && col_diff == 2) || (row_diff == 2 && col_diff == 1)
-                    }
-                    PieceType::Rook => match (from_row.cmp(&to_row), from_col.cmp(&to_col)) {
-                        // if to_row < and to_col ==
-                        (Ordering::Less, Ordering::Equal) => {
-                            // iterate through each row between
-                            for row in from_row + 1..to_row {
-                                // iterate through each square in between the rook and destination
-                                let square = &gameboard.squares[row as usize][from_col as usize];
-                                if square.piece.piece_type != PieceType::None {
-                                    return false;
+                                    // piece one row ahead, and one column to side
                                 }
                             }
-                            true
-                        }
-                        // if to_row == and to_col <
-                        (Ordering::Equal, Ordering::Less) => {
-                            // iterate through each col between
-                            for col in from_col + 1..to_col {
-                                // iterate through each square in between the rook and destination
-                                let square = &gameboard.squares[from_row as usize][col as usize];
-                                if square.piece.piece_type != PieceType::None {
-                                    return false;
+                            PieceType::Knight => {
+                                let row_diff = to_row.abs_diff(from_row);
+                                let col_diff = to_col.abs_diff(from_col);
+
+                                // row change must be 1 and col change 2, or vice versa
+                                (row_diff == 1 && col_diff == 2) || (row_diff == 2 && col_diff == 1)
+                            }
+                            PieceType::Rook => match (from_row.cmp(&to_row), from_col.cmp(&to_col))
+                            {
+                                // if to_row < and to_col ==
+                                (Ordering::Less, Ordering::Equal) => {
+                                    // iterate through each row between
+                                    for row in from_row + 1..to_row {
+                                        // iterate through each square in between the rook and destination
+                                        let square =
+                                            &gameboard.squares[row as usize][from_col as usize];
+                                        if square.piece.piece_type != PieceType::None {
+                                            return false;
+                                        }
+                                    }
+                                    true
+                                }
+                                // if to_row == and to_col <
+                                (Ordering::Equal, Ordering::Less) => {
+                                    // iterate through each col between
+                                    for col in from_col + 1..to_col {
+                                        // iterate through each square in between the rook and destination
+                                        let square =
+                                            &gameboard.squares[from_row as usize][col as usize];
+                                        if square.piece.piece_type != PieceType::None {
+                                            return false;
+                                        }
+                                    }
+                                    true
+                                }
+                                // if to_row == and to_col >
+                                (Ordering::Equal, Ordering::Greater) => {
+                                    // iterate through each col between, but reversed order.
+                                    for col in (to_col + 1..from_col).rev() {
+                                        // iterate through each square in between the rook and destination
+                                        let square =
+                                            &gameboard.squares[from_row as usize][col as usize];
+                                        if square.piece.piece_type != PieceType::None {
+                                            return false;
+                                        }
+                                    }
+                                    true
+                                }
+                                // if to_row > and to_col ==
+                                (Ordering::Greater, Ordering::Equal) => {
+                                    // iterate through each row between, but reversed order.
+                                    for row in (to_row + 1..from_row).rev() {
+                                        // iterate through each square in between the rook and destination
+                                        let square =
+                                            &gameboard.squares[row as usize][from_col as usize];
+                                        if square.piece.piece_type != PieceType::None {
+                                            return false;
+                                        }
+                                    }
+                                    true
+                                }
+                                _ => false,
+                            },
+                            PieceType::Bishop => {
+                                if from_row != to_row
+                                    && from_col != to_col
+                                    && to_row.abs_diff(from_row) == to_col.abs_diff(from_col)
+                                {
+                                    let row_step = (to_row as i8 - from_row as i8).signum(); // +1 for upward diagonal, -1 for downward diagonal
+                                    let col_step = (to_col as i8 - from_col as i8).signum(); // +1 for rightward diagonal, -1 for leftward diagonal
+
+                                    let mut row = from_row as i8 + row_step;
+                                    let mut col = from_col as i8 + col_step;
+
+                                    while row != to_row as i8 && col != to_col as i8 {
+                                        let square = &gameboard.squares[row as usize][col as usize];
+                                        if square.piece.piece_type != PieceType::None {
+                                            // square in between from and to squares are empty
+                                            return false;
+                                        }
+                                        row += row_step;
+                                        col += col_step;
+                                    }
+
+                                    true
+                                } else {
+                                    false
                                 }
                             }
-                            true
-                        }
-                        // if to_row == and to_col >
-                        (Ordering::Equal, Ordering::Greater) => {
-                            // iterate through each col between, but reversed order.
-                            for col in (to_col + 1..from_col).rev() {
-                                // iterate through each square in between the rook and destination
-                                let square = &gameboard.squares[from_row as usize][col as usize];
-                                if square.piece.piece_type != PieceType::None {
-                                    return false;
+                            PieceType::Queen => {
+                                if from_row == to_row
+                                    || from_col == to_col
+                                    || (from_row as i8 - to_row as i8).abs()
+                                        == (from_col as i8 - to_col as i8).abs()
+                                {
+                                    let row_step = if from_row == to_row {
+                                        0
+                                    } else {
+                                        (to_row as i8 - from_row as i8).signum()
+                                    }; // +1 for upward diagonal, -1 for downward diagonal
+                                    let col_step = if from_col == to_col {
+                                        0
+                                    } else {
+                                        (to_col as i8 - from_col as i8).signum()
+                                    }; // +1 for rightward diagonal, -1 for leftward diagonal
+
+                                    let mut row = from_row as i8 + row_step;
+                                    let mut col = from_col as i8 + col_step;
+
+                                    while row != to_row as i8 || col != to_col as i8 {
+                                        let square = &gameboard.squares[row as usize][col as usize];
+                                        if square.piece.piece_type != PieceType::None {
+                                            return false;
+                                        }
+                                        row += row_step;
+                                        col += col_step;
+                                    }
+
+                                    true
+                                } else {
+                                    false
                                 }
                             }
-                            true
-                        }
-                        // if to_row > and to_col ==
-                        (Ordering::Greater, Ordering::Equal) => {
-                            // iterate through each row between, but reversed order.
-                            for row in (to_row + 1..from_row).rev() {
-                                // iterate through each square in between the rook and destination
-                                let square = &gameboard.squares[row as usize][from_col as usize];
-                                if square.piece.piece_type != PieceType::None {
-                                    return false;
-                                }
-                            }
-                            true
-                        }
-                        _ => false,
-                    },
-                    PieceType::Bishop => {
-                        if from_row != to_row
-                            && from_col != to_col
-                            && to_row.abs_diff(from_row) == to_col.abs_diff(from_col)
-                        {
-                            let row_step = (to_row as i8 - from_row as i8).signum(); // +1 for upward diagonal, -1 for downward diagonal
-                            let col_step = (to_col as i8 - from_col as i8).signum(); // +1 for rightward diagonal, -1 for leftward diagonal
-
-                            let mut row = from_row as i8 + row_step;
-                            let mut col = from_col as i8 + col_step;
-
-                            while row != to_row as i8 && col != to_col as i8 {
-                                let square = &gameboard.squares[row as usize][col as usize];
-                                if square.piece.piece_type != PieceType::None {
-                                    // square in between from and to squares are empty
-                                    return false;
-                                }
-                                row += row_step;
-                                col += col_step;
-                            }
-
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    PieceType::Queen => {
-                        if from_row == to_row
-                            || from_col == to_col
-                            || (from_row as i8 - to_row as i8).abs()
-                                == (from_col as i8 - to_col as i8).abs()
-                        {
-                            let row_step = if from_row == to_row {
-                                0
-                            } else {
-                                (to_row as i8 - from_row as i8).signum()
-                            }; // +1 for upward diagonal, -1 for downward diagonal
-                            let col_step = if from_col == to_col {
-                                0
-                            } else {
-                                (to_col as i8 - from_col as i8).signum()
-                            }; // +1 for rightward diagonal, -1 for leftward diagonal
-
-                            let mut row = from_row as i8 + row_step;
-                            let mut col = from_col as i8 + col_step;
-
-                            while row != to_row as i8 || col != to_col as i8 {
-                                let square = &gameboard.squares[row as usize][col as usize];
-                                if square.piece.piece_type != PieceType::None {
-                                    return false;
-                                }
-                                row += row_step;
-                                col += col_step;
-                            }
-
-                            true
-                        } else {
-                            false
-                        }
-                    }
-                    PieceType::King => {
-                        return (to_row <= from_row + 1 && to_row >= from_row - 1) && (to_col <= from_col + 1 && to_col >= from_col - 1) && // can only move 1 square in any direction
+                            PieceType::King => {
+                                return (to_row <= from_row + 1 && to_row >= from_row - 1) && (to_col <= from_col + 1 && to_col >= from_col - 1) && // can only move 1 square in any direction
                       &to_square.piece.piece_type == &PieceType::None
-                            || &to_square.piece.color != &self.color; // can only move to square if it is empty or has enemy piece on it
+                                    || &to_square.piece.color != &self.color; // can only move to square if it is empty or has enemy piece on it
+                            }
+                            _ => false,
+                        }
+                    } else {
+                        false
                     }
-                    _ => false,
+                // not this color's turn
+                } else {
+                    println!("It is not currently {:?}'s turn.", &self.color);
+                    false
                 }
+            // IN CHECK, ADD STUFF LATER
             } else {
+                println!("In check.");
                 false
             }
-        // not this color's turn
+        // trying to take own piece
         } else {
-            println!("It is not currently {:?}'s turn.", &self.color);
+            println!("Can't take own piece.");
             false
         }
-      // trying to take own piece
-      } else {
-        println!("Can't take own piece.");
-        false
-      }
     }
     fn move_piece(&self, from: (u8, u8), to: (u8, u8), gameboard: &mut Board) -> Board {
         let (from_row, from_col) = from;
@@ -263,7 +276,7 @@ impl Piece {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 enum Color {
     None,
     White,
@@ -278,8 +291,86 @@ struct Square {
 #[derive(Debug, Clone)]
 struct Board {
     squares: Vec<Vec<Square>>,
+    white_king_square: (u8, u8),
+    black_king_square: (u8, u8),
     current_turn: Color,
     in_check: Color,
+}
+
+impl Board {
+    fn get_king_pos(&mut self) {
+        for row in 0..self.squares.len() {
+            for col in 0..self.squares[row].len() {
+                let piece = &self.squares[row][col].piece;
+                let piece_type = &piece.piece_type;
+                if piece_type == &PieceType::King {
+                    if &piece.color == &Color::White {
+                        self.white_king_square = (row as u8, col as u8);
+                        println!("White king square: {:?}", self.white_king_square);
+                    } else {
+                        self.black_king_square = (row as u8, col as u8);
+                    }
+                }
+            }
+        }
+    }
+    fn putting_in_check(&mut self) -> bool {
+        self.get_king_pos();
+        for row in 0..self.squares.len() {
+            for col in 0..self.squares[row].len() {
+                let piece = &self.squares[row][col].piece;
+                let piece_type = &piece.piece_type;
+
+                match &piece_type {
+                    PieceType::Pawn => {
+                        let mut attack_row = 0;
+                        let attacked_color;
+                        let mut pieces: Vec<&Piece> = Vec::new();
+
+                        if piece.color == Color::White {
+                            attacked_color = Color::Black;
+
+                            // not in top row
+                            if row <= 6 {
+                                attack_row = row + 1;
+                            }
+                            // Color::Black
+                        } else {
+                            attacked_color = Color::White;
+                            // not on bottom row
+                            if row >= 1 {
+                                attack_row = row - 1;
+                            }
+                        }
+
+                        // not on very left
+                        if col >= 1 {
+                            let left_piece = &self.squares[attack_row][col - 1].piece;
+                            pieces.push(left_piece);
+                        }
+                        // not on very right
+                        if col <= 6 {
+                            let right_piece = &self.squares[attack_row][col + 1].piece;
+                            pieces.push(right_piece);
+                        }
+                        for piece in pieces {
+                            if piece.piece_type == PieceType::King {
+                                self.in_check = attacked_color;
+                                println!("In check: {:?}", self.in_check);
+                            }
+                        }
+                    }
+                    PieceType::Knight => continue,
+                    PieceType::Bishop => continue,
+                    PieceType::Rook => continue,
+                    PieceType::Queen => continue,
+                    _ => continue,
+                };
+            }
+        }
+        // REMOVE LATER
+        false
+    }
 }
 
 fn create_board() -> Board {
@@ -314,11 +405,20 @@ fn create_board() -> Board {
         // add each row to the board
         squares.push(row_squares);
     }
-    squares[5][4].piece = Piece {piece_type: PieceType::Pawn, color: Color::White};
+    squares[5][4].piece = Piece {
+        piece_type: PieceType::Pawn,
+        color: Color::White,
+    };
+    squares[2][4].piece = Piece {
+        piece_type: PieceType::Pawn,
+        color: Color::Black,
+    };
 
     // return a Board
     Board {
         squares: squares,
+        white_king_square: (0, 4),
+        black_king_square: (7, 4),
         current_turn: Color::White,
         in_check: Color::None,
     }
@@ -329,7 +429,7 @@ fn print_board(gameboard: &Board) {
     for row in (0..8).rev() {
         let mut row_str = "".to_string();
         // iterate through each square in each row, also reversed
-        for col in (0..8) {
+        for col in 0..8 {
             let square = &gameboard.squares[row][col];
             // set what the square gets displayed as, depending on color and piece
             let square_str = match square.piece.color {
