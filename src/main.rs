@@ -9,7 +9,15 @@ fn main() {
 
     while playing {
         gameboard.putting_in_check();
-        let positions = get_cli_input();
+        let cli_input_result = get_cli_input();
+        let positions: (u8, u8, u8, u8);
+        match cli_input_result {
+            Ok(move_pos) => positions = move_pos,
+            Err(err) => {
+                println!("{}", err);
+                continue;
+            }
+        }
         let from_row = positions.0;
         let from_col = positions.1;
         let to_row = positions.2;
@@ -68,11 +76,10 @@ impl Piece {
         let to_square = &gameboard.squares[to_row as usize][to_col as usize];
 
         /* isn't taking own piece */
-        if &to_square.piece.color != &self.color || &to_square.piece.piece_type == &PieceType::None
-        {
+        if to_square.piece.color != self.color || to_square.piece.piece_type == PieceType::None {
             if gameboard.in_check != from_square.piece.color {
                 // is turn
-                if &gameboard.current_turn == &self.color {
+                if gameboard.current_turn == self.color {
                     if to_col <= 7 && to_row <= 7 {
                         // possible col
                         match self.piece_type {
@@ -83,7 +90,7 @@ impl Piece {
                           (from_row == 1 && to_row == 3))) // OR pawn is on starting square, moving 2
                           ||
                           (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to dif column AND
-                          (to_row == from_row + 1 && &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color);
+                          (to_row == from_row + 1 && to_square.piece.piece_type != PieceType::None && to_square.piece.color != self.color);
 
                                 // enemy piece is takeable
                                 } else {
@@ -92,7 +99,7 @@ impl Piece {
                           (from_row == 6 && to_row == 4))) // OR pawn is on starting square, moving 2
                           ||
                           (from_col == to_col-1 || from_col == to_col+1) &&  // pawn moving to different column AND
-                          (to_row == from_row - 1 && &to_square.piece.piece_type != &PieceType::None && &to_square.piece.color != &self.color);
+                          (to_row == from_row - 1 && to_square.piece.piece_type != PieceType::None && to_square.piece.color != self.color);
                                     // piece one row ahead, and one column to side
                                 }
                             }
@@ -221,8 +228,8 @@ impl Piece {
                             }
                             PieceType::King => {
                                 return (to_row <= from_row + 1 && to_row >= from_row - 1) && (to_col <= from_col + 1 && to_col >= from_col - 1) && // can only move 1 square in any direction
-                      &to_square.piece.piece_type == &PieceType::None
-                                    || &to_square.piece.color != &self.color; // can only move to square if it is empty or has enemy piece on it
+                      to_square.piece.piece_type == PieceType::None
+                                    || to_square.piece.color != self.color; // can only move to square if it is empty or has enemy piece on it
                             }
                             _ => false,
                         }
@@ -259,7 +266,7 @@ impl Piece {
             gameboard.squares[to_row as usize][to_col as usize] = Square {
                 piece: Piece {
                     piece_type: self.piece_type.clone(),
-                    color: self.color.clone(),
+                    color: self.color,
                 },
             };
             if gameboard.current_turn == Color::White {
@@ -304,7 +311,7 @@ impl Board {
                 let piece = &self.squares[row][col].piece;
                 let piece_type = &piece.piece_type;
                 if piece_type == &PieceType::King {
-                    if &piece.color == &Color::White {
+                    if piece.color == Color::White {
                         self.white_king_square = (row as u8, col as u8);
                         println!("White king square: {:?}", self.white_king_square);
                     } else {
@@ -394,17 +401,16 @@ fn create_board() -> Board {
 
             let color = if row < 2 { Color::White } else { Color::Black };
 
-            let piece = Piece {
-                piece_type: piece_type,
-                color: color,
-            };
-            let square = Square { piece: piece };
+            let piece = Piece { piece_type, color };
+            let square = Square { piece };
             // add each square to the row
             row_squares.push(square);
         }
         // add each row to the board
         squares.push(row_squares);
     }
+
+    /* pawns for testing checks
     squares[5][4].piece = Piece {
         piece_type: PieceType::Pawn,
         color: Color::White,
@@ -413,10 +419,11 @@ fn create_board() -> Board {
         piece_type: PieceType::Pawn,
         color: Color::Black,
     };
+    */
 
     // return a Board
     Board {
-        squares: squares,
+        squares,
         white_king_square: (0, 4),
         black_king_square: (7, 4),
         current_turn: Color::White,
@@ -460,7 +467,7 @@ fn print_board(gameboard: &Board) {
     println!("");
 }
 
-fn get_cli_input() -> (u8, u8, u8, u8) {
+fn get_cli_input() -> Result<(u8, u8, u8, u8), String> {
     let mut user_input = "".to_string();
 
     io::stdin()
@@ -468,30 +475,58 @@ fn get_cli_input() -> (u8, u8, u8, u8) {
         .expect("Could not read line.");
     let trimmed_input = user_input.trim();
 
-    let input_square: Vec<&str> = trimmed_input.split(" ").collect();
+    let input_square: Vec<&str> = trimmed_input.split(' ').collect();
     let from_square = input_square[0];
     let to_square = input_square[1];
 
-    let from_file_n = letter_to_number(&from_square[0..1]);
-    let from_rank = &from_square[1..2].parse::<u8>().unwrap() - 1;
+    let from_file_result = letter_to_number(&from_square[0..1]);
+    let to_file_result = letter_to_number(&to_square[0..1]);
 
-    let to_file_n = letter_to_number(&to_square[0..1]);
-    let to_rank = &to_square[1..2].parse::<u8>().unwrap() - 1;
-
-    let from_file = match from_file_n {
+    let from_file = match from_file_result {
         Some(x) => x,
         None => {
-            panic!("invalid file.");
+            return Err(String::from("Invalid file."));
         }
     };
-    let to_file = match to_file_n {
+    let to_file = match to_file_result {
         Some(x) => x,
         None => {
-            panic!("invalid file.");
+            return Err(String::from("Invalid file."));
         }
     };
 
-    (from_rank, from_file, to_rank, to_file)
+    // dont forget to do -1
+    let from_rank_result = &from_square[1..2].parse::<u8>();
+    let from_rank: u8;
+
+    match from_rank_result {
+        Ok(rank) => {
+            from_rank = rank - 1;
+        }
+        Err(_err) => {
+            return Err(String::from("Invalid rank."));
+        }
+    };
+
+    let to_rank_result = &to_square[1..2].parse::<u8>();
+    let to_rank: u8;
+
+    match to_rank_result {
+        Ok(rank) => {
+            to_rank = rank - 1;
+        }
+        Err(_err) => {
+            return Err(String::from("Invalid rank."));
+        }
+    };
+
+    if from_rank > 7 || to_rank > 7 {
+        return Err(String::from(
+            "You cannot move from or to outside the board.",
+        ));
+    }
+
+    Ok((from_rank, from_file, to_rank, to_file))
 }
 
 fn letter_to_number(letter: &str) -> Option<u8> {
@@ -500,9 +535,13 @@ fn letter_to_number(letter: &str) -> Option<u8> {
     Some((index) as u8)
 }
 
+fn correct_notation(from_square: &str, to_square: &str) -> bool {
+    true
+}
+
 fn square_is_empty(piece: &Piece, row: u8, col: u8, gameboard: &Board) -> bool {
     let to_square = &gameboard.squares[row as usize][col as usize];
-    &to_square.piece.piece_type == &PieceType::None || &to_square.piece.color != &piece.color
+    to_square.piece.piece_type == PieceType::None || to_square.piece.color != piece.color
 }
 
 fn print_type_of<T>(_: &T) {
