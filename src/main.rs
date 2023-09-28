@@ -313,7 +313,7 @@ impl Board {
                 if piece_type == &PieceType::King {
                     if piece.color == Color::White {
                         self.white_king_square = (row as u8, col as u8);
-                        println!("White king square: {:?}", self.white_king_square);
+                        //println!("White king square: {:?}", self.white_king_square);
                     } else {
                         self.black_king_square = (row as u8, col as u8);
                     }
@@ -476,8 +476,17 @@ fn get_cli_input() -> Result<(u8, u8, u8, u8), String> {
     let trimmed_input = user_input.trim();
 
     let input_square: Vec<&str> = trimmed_input.split(' ').collect();
+
+    if input_square.len() != 2 {
+        return Err(String::from("Needs 2 arguments. (Example: e2 e4)"));
+    }
+
     let from_square = input_square[0];
     let to_square = input_square[1];
+
+    if from_square.len() != 2 || to_square.len() != 2 {
+        return Err(String::from("Please enter a valid move. (Example: e2 e4)"));
+    }
 
     let from_file_result = letter_to_number(&from_square[0..1]);
     let to_file_result = letter_to_number(&to_square[0..1]);
@@ -533,10 +542,6 @@ fn letter_to_number(letter: &str) -> Option<u8> {
     let alphabet = "abcdefgh";
     let index = alphabet.find(letter)?;
     Some((index) as u8)
-}
-
-fn correct_notation(from_square: &str, to_square: &str) -> bool {
-    true
 }
 
 fn square_is_empty(piece: &Piece, row: u8, col: u8, gameboard: &Board) -> bool {
